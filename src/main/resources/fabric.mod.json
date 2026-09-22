@@ -3,9 +3,13 @@
   "id": "questcraft-render-patch",
   "version": "1.0.0",
   "name": "QuestCraft Render Patch",
-  "description": "Forces modded blocks into a safe VR rendering pipeline.",
+  "description": "Safely maps modded block layers on startup to prevent invisible textures.",
   "environment": "client",
-  "entrypoints": {},
+  "entrypoints": {
+    "client": [
+      "com.example.QuestCraftRenderPatchClient"
+    ]
+  },
   "mixins": [
     "modid.mixins.json"
   ],
