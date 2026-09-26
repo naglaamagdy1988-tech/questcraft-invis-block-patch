@@ -21,8 +21,11 @@ jobs:
           distribution: 'microsoft'
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: build
-        run: ./gradlew build
+     - name: build
+  run: |
+    ./gradlew build
+    echo "===== CHECKING JAR ====="
+    jar tf build/libs/*.jar | grep -E "QuestCraftRenderPatchClient|ExampleModClient"
       - name: capture build artifacts
         uses: actions/upload-artifact@v7
         with:
