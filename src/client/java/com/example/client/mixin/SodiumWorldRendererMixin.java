@@ -1,10 +1,10 @@
+
 package com.example.client.mixin;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
-import org.vivecraft.client_xr.render_pass.RenderPassType;
 
 @Pseudo
 @Mixin(targets = "net.caffeinemc.mods.sodium.client.render.SodiumWorldRenderer")
@@ -17,6 +17,18 @@ public class SodiumWorldRendererMixin {
         ordinal = 1
     )
     private boolean questcraft$forceChunkUpdates(boolean updateChunksImmediately) {
-        return !RenderPassType.isVanilla() || updateChunksImmediately;
+        try {
+            Class<?> renderPassType = Class.forName(
+                "org.vivecraft.client_xr.render_pass.RenderPassType"
+            );
+
+            boolean isVanilla = (boolean) renderPassType
+                .getMethod("isVanilla")
+                .invoke(null);
+
+            return !isVanilla || updateChunksImmediately;
+        } catch (ReflectiveOperationException e) {
+            return updateChunksImmediately;
+        }
     }
 }
