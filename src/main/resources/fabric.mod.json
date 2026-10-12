@@ -1,16 +1,15 @@
+
 {
   "schemaVersion": 1,
   "id": "questcraft-render-patch",
   "version": "1.0.0",
   "name": "QuestCraft Render Patch",
-  "description": "Safely maps modded block layers on startup to prevent invisible textures.",
+  "description": "QuestCraft rendering patch",
   "environment": "client",
-"entrypoints": {
-  "client": [
-    "com.example.client.ExampleModClient"
-  ]
-},
-
+  "entrypoints": {
+    "client": [
+      "com.example.client.ExampleModClient"
+    ]
   },
   "mixins": [
     "modid.mixins.json"
