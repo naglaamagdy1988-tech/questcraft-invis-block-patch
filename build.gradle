@@ -2,7 +2,16 @@ plugins {
     id 'net.fabricmc.fabric-loom' version "${loom_version}"
     id 'maven-publish'
 }
+loom {
+    splitEnvironmentSourceSets()
 
+    mods {
+        "questcraft-render-patch" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+}
 version = project.mod_version
 group = project.maven_group
 
