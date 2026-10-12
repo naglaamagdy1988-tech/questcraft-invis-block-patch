@@ -5,10 +5,12 @@
   "name": "QuestCraft Render Patch",
   "description": "Safely maps modded block layers on startup to prevent invisible textures.",
   "environment": "client",
-  "entrypoints": {
-    "client": [
-  "com.example.client.QuestCraftRenderPatchClient"
-]
+"entrypoints": {
+  "client": [
+    "com.example.client.ExampleModClient"
+  ]
+},
+
   },
   "mixins": [
     "modid.mixins.json"
