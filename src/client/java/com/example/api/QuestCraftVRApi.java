@@ -121,7 +121,7 @@ public final class QuestCraftVRApi {
             Method stateMethod = apiClass.getMethod(methodName);
             return Boolean.TRUE.equals(stateMethod.invoke(apiInstance));
         } catch (ReflectiveOperationException | LinkageError
-                 | RuntimeException | SecurityException ignored) {
+                 | RuntimeException ignored) {
             return false;
         }
     }
