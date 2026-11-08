@@ -10,7 +10,6 @@
     "client": [
   "com.example.client.QuestCraftRenderPatchClient"
 ]
-    ]
   },
   "mixins": [
     "modid.mixins.json"
