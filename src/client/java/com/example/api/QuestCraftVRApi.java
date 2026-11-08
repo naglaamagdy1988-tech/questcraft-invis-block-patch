@@ -45,6 +45,21 @@ public final class QuestCraftVRApi {
     }
 
     /**
+     * Returns whether the player is configured to use seated VR mode.
+     * This is a preference check, not a check that VR is currently active.
+     */
+    public static boolean isSeated() {
+        return invokeBooleanApiMethod("isSeated");
+    }
+
+    /**
+     * Returns whether the player is configured for left-handed VR controls.
+     */
+    public static boolean isLeftHanded() {
+        return invokeBooleanApiMethod("isLeftHanded");
+    }
+
+    /**
      * Convenient alias for mods that want to check whether the player is
      * currently playing in VR.
      */
