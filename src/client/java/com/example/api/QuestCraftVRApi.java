@@ -1,16 +1,20 @@
 package com.example.api;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 /**
- * Optional compatibility bridge between QuestCraft-compatible mods and Vivecraft.
+ * Public, optional compatibility bridge between QuestCraft-compatible mods
+ * and the Vivecraft client API.
  *
- * <p>The diagnostic methods inspect the API without initializing Vivecraft.
- * This lets a mod distinguish a missing API from an API with an incompatible
- * shape before attempting to use it.</p>
+ * <p>Mods can use this class without importing Vivecraft implementation
+ * classes. API shape checks do not initialize Vivecraft; state queries do.</p>
  */
 public final class QuestCraftVRApi {
+    /** Version of this bridge's public API contract. */
+    public static final int API_VERSION = 1;
+
     private static final String VIVECRAFT_CLIENT_API =
             "org.vivecraft.api.client.VRClientAPI";
 
@@ -23,12 +27,87 @@ public final class QuestCraftVRApi {
         INCOMPATIBLE
     }
 
+    /** Result of one safe VR-state query. */
+    public enum StateStatus {
+        READY,
+        NOT_INITIALIZED,
+        API_MISSING,
+        API_INCOMPATIBLE,
+        ERROR
+    }
+
+    /**
+     * Immutable snapshot so callers can read several VR flags from one API
+     * query instead of repeatedly reflecting into Vivecraft.
+     */
+    public static final class VRState {
+        private final ApiStatus apiStatus;
+        private final StateStatus status;
+        private final boolean initialized;
+        private final boolean active;
+        private final boolean seated;
+        private final boolean leftHanded;
+        private final String error;
+
+        private VRState(
+                ApiStatus apiStatus,
+                StateStatus status,
+                boolean initialized,
+                boolean active,
+                boolean seated,
+                boolean leftHanded,
+                String error
+        ) {
+            this.apiStatus = apiStatus;
+            this.status = status;
+            this.initialized = initialized;
+            this.active = active;
+            this.seated = seated;
+            this.leftHanded = leftHanded;
+            this.error = error;
+        }
+
+        public ApiStatus getApiStatus() {
+            return apiStatus;
+        }
+
+        public StateStatus getStatus() {
+            return status;
+        }
+
+        public boolean isApiAvailable() {
+            return apiStatus == ApiStatus.AVAILABLE;
+        }
+
+        public boolean isInitialized() {
+            return initialized;
+        }
+
+        public boolean isActive() {
+            return active;
+        }
+
+        public boolean isSeated() {
+            return seated;
+        }
+
+        public boolean isLeftHanded() {
+            return leftHanded;
+        }
+
+        /**
+         * Returns a concise diagnostic when the query failed; otherwise null.
+         */
+        public String getError() {
+            return error;
+        }
+    }
+
     /**
      * Checks the public API shape without initializing Vivecraft.
      *
      * @return AVAILABLE when the expected methods exist, MISSING when the
-     * API class is absent, or INCOMPATIBLE when it exists but does not match
-     * the methods this bridge needs.
+     * API class is absent, or INCOMPATIBLE when it does not match this bridge.
      */
     public static ApiStatus getApiStatus() {
         final Class<?> apiClass;
@@ -73,36 +152,19 @@ public final class QuestCraftVRApi {
     }
 
     /**
-     * Backwards-compatible presence check. Use getApiStatus() when the
-     * distinction between missing and incompatible matters.
+     * Queries all supported state flags once and returns an immutable result.
+     * A failed or unavailable Vivecraft API is reported in the result rather
+     * than escaping as an exception into the calling mod.
      */
-    public static boolean isVivecraftApiAvailable() {
-        return getApiStatus() != ApiStatus.MISSING;
-    }
-
-    public static boolean isVRInitialized() {
-        return invokeBooleanApiMethod("isVRInitialized");
-    }
-
-    public static boolean isVRActive() {
-        return invokeBooleanApiMethod("isVRActive");
-    }
-
-    public static boolean isSeated() {
-        return invokeBooleanApiMethod("isSeated");
-    }
-
-    public static boolean isLeftHanded() {
-        return invokeBooleanApiMethod("isLeftHanded");
-    }
-
-    public static boolean isInVR() {
-        return isVRActive();
-    }
-
-    private static boolean invokeBooleanApiMethod(String methodName) {
-        if (getApiStatus() != ApiStatus.AVAILABLE) {
-            return false;
+    public static VRState getVRState() {
+        ApiStatus apiStatus = getApiStatus();
+        if (apiStatus == ApiStatus.MISSING) {
+            return unavailable(apiStatus, StateStatus.API_MISSING,
+                    "Vivecraft client API class was not found");
+        }
+        if (apiStatus == ApiStatus.INCOMPATIBLE) {
+            return unavailable(apiStatus, StateStatus.API_INCOMPATIBLE,
+                    "Vivecraft client API does not match the expected methods");
         }
 
         try {
@@ -115,14 +177,88 @@ public final class QuestCraftVRApi {
             Method instanceMethod = apiClass.getMethod("instance");
             Object apiInstance = instanceMethod.invoke(null);
             if (apiInstance == null) {
-                return false;
+                return unavailable(apiStatus, StateStatus.ERROR,
+                        "VRClientAPI.instance() returned null");
             }
 
-            Method stateMethod = apiClass.getMethod(methodName);
-            return Boolean.TRUE.equals(stateMethod.invoke(apiInstance));
+            boolean initialized = invokeBoolean(apiClass, apiInstance,
+                    "isVRInitialized");
+            if (!initialized) {
+                return new VRState(apiStatus, StateStatus.NOT_INITIALIZED,
+                        false, false, false, false, null);
+            }
+
+            boolean active = invokeBoolean(apiClass, apiInstance, "isVRActive");
+            boolean seated = invokeBoolean(apiClass, apiInstance, "isSeated");
+            boolean leftHanded = invokeBoolean(apiClass, apiInstance,
+                    "isLeftHanded");
+
+            return new VRState(apiStatus, StateStatus.READY, true, active,
+                    seated, leftHanded, null);
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause() == null ? e : e.getCause();
+            return unavailable(apiStatus, StateStatus.ERROR,
+                    describeFailure(cause));
         } catch (ReflectiveOperationException | LinkageError
-                 | RuntimeException ignored) {
-            return false;
+                 | RuntimeException e) {
+            return unavailable(apiStatus, StateStatus.ERROR,
+                    describeFailure(e));
         }
+    }
+
+    private static boolean invokeBoolean(
+            Class<?> apiClass,
+            Object apiInstance,
+            String methodName
+    ) throws ReflectiveOperationException {
+        Method method = apiClass.getMethod(methodName);
+        return Boolean.TRUE.equals(method.invoke(apiInstance));
+    }
+
+    private static VRState unavailable(
+            ApiStatus apiStatus,
+            StateStatus status,
+            String error
+    ) {
+        return new VRState(apiStatus, status, false, false, false, false, error);
+    }
+
+    private static String describeFailure(Throwable failure) {
+        String message = failure.getMessage();
+        return failure.getClass().getName()
+                + (message == null || message.isBlank() ? "" : ": " + message);
+    }
+
+    /**
+     * Backwards-compatible presence check. This reports whether the class
+     * exists, even if its method shape is incompatible; use getApiStatus()
+     * when compatibility matters.
+     */
+    public static boolean isVivecraftApiAvailable() {
+        return getApiStatus() != ApiStatus.MISSING;
+    }
+
+    /**
+     * Convenience accessors retained for simple callers. Mods that need
+     * multiple flags should call getVRState() once and reuse the snapshot.
+     */
+    public static boolean isVRInitialized() {
+        return getVRState().isInitialized();
+    }
+
+    public static boolean isVRActive() {
+        return getVRState().isActive();
+    }
+
+    public static boolean isSeated() {
+        return getVRState().isSeated();
+    }
+
+    public static boolean isLeftHanded() {
+        return getVRState().isLeftHanded();
+    }
+
+    public static boolean isInVR() {
+        return isVRActive();
     }
 }
