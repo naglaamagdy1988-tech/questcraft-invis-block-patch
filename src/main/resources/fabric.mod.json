@@ -8,7 +8,8 @@
   "environment": "client",
   "entrypoints": {
     "client": [
-      "com.example.client.ExampleModClient"
+  "com.example.client.QuestCraftRenderPatchClient"
+]
     ]
   },
   "mixins": [
