@@ -117,6 +117,27 @@ if (history.isAvailable()) {
 - The requested lookback is limited to the history currently available, up to
   Vivecraft's 200-tick history limit.
 
+### Movement level logic
+
+`VRMotionSnapshot` classifies available body-part movement as `STILL`,
+`MOVING`, or `FAST` using thresholds chosen by the calling mod. Both thresholds
+use blocks per tick, so mods can tune the bands for their own interactions.
+
+```java
+VRMotionSnapshot motion = VRMotionSnapshot.capture(6, true, 0.02, 0.12);
+VRMotionSnapshot.Motion hand = motion.getMotion(
+        VRPoseHistorySnapshot.BodyPart.MAIN_HAND
+);
+
+if (motion.isAvailable() && hand != null
+        && hand.level() == VRMotionSnapshot.Level.FAST) {
+    // Handle a fast hand movement.
+}
+```
+
+Missing parts are omitted. The result keeps the pose-history status and reports
+invalid thresholds or unavailable movement data through `getError()`.
+
 ### Safe result statuses
 
 The state, pose, and history APIs report unavailable or failed states instead
