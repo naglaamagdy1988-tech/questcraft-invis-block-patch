@@ -1,4 +1,7 @@
 {
+  "options.questcraft-render-patch.sodium_page": "QuestCraft Render Patch",
+  "options.questcraft-render-patch.invisible_blocks.name": "Invisible Block Patch",
+  "options.questcraft-render-patch.invisible_blocks.tooltip": "Refreshes Sodium chunks in Vivecraft VR render passes to help prevent missing blocks.",
   "options.questcraft-render-patch.invisible_blocks.on": "Invisible Block Patch: ON",
   "options.questcraft-render-patch.invisible_blocks.off": "Invisible Block Patch: OFF",
   "options.questcraft-render-patch.estimated_legs.on": "Estimated Leg Poses: ON",

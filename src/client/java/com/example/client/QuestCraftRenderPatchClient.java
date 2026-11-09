@@ -85,6 +85,10 @@ public class QuestCraftRenderPatchClient implements ClientModInitializer {
         return invisibleBlockPatchEnabled;
     }
 
+    static void setInvisibleBlockPatchEnabled(boolean enabled) {
+        invisibleBlockPatchEnabled = enabled;
+    }
+
     private static void loadSettings() {
         if (!Files.exists(settingsFile)) return;
         try (var reader = Files.newBufferedReader(settingsFile)) {
@@ -100,7 +104,7 @@ public class QuestCraftRenderPatchClient implements ClientModInitializer {
         }
     }
 
-    private static void saveSettings() {
+    static void saveSettings() {
         JsonObject json = new JsonObject();
         json.addProperty("estimatedLegTracking", estimatedLegTrackingEnabled);
         json.addProperty("invisibleBlockPatch", invisibleBlockPatchEnabled);

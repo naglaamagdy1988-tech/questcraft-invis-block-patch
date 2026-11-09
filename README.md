@@ -11,9 +11,11 @@ before a stable release.
 ## Invisible block patch
 
 The optional Sodium/Vivecraft chunk-update patch is enabled by default. It
-forces updates during non-vanilla VR render passes. Toggle **Invisible Block
-Patch** in **Options → Video Settings** to turn it on or off. Its setting is
-saved in `config/questcraft-render-patch.json`.
+forces updates during non-vanilla VR render passes. In Sodium, open
+**Options → Video Settings → QuestCraft Render Patch** to toggle
+**Invisible Block Patch**. Without Sodium, a fallback toggle appears in the
+vanilla video settings screen. Its setting is saved in
+`config/questcraft-render-patch.json`.
 
 ## Current API
 

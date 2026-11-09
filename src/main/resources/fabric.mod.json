@@ -8,8 +8,11 @@
   "environment": "client",
   "entrypoints": {
     "client": [
-  "com.example.client.QuestCraftRenderPatchClient"
-]
+      "com.example.client.QuestCraftRenderPatchClient"
+    ],
+    "sodium:config_api_user": [
+      "com.example.client.QuestCraftSodiumConfig"
+    ]
   },
   "mixins": [
     "modid.mixins.json"
