@@ -21,6 +21,7 @@ public class QuestCraftRenderPatchClient implements ClientModInitializer {
     private static final Logger LOGGER =
             LoggerFactory.getLogger("QuestCraftRenderPatch");
     private static boolean estimatedLegTrackingEnabled;
+    private static volatile boolean invisibleBlockPatchEnabled = true;
     private static Path settingsFile;
 
     @Override
@@ -34,6 +35,17 @@ public class QuestCraftRenderPatchClient implements ClientModInitializer {
 
         ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
             if (screen instanceof VideoSettingsScreen) {
+                Button blockPatchButton = Button.builder(
+                                blockPatchLabel(),
+                                button -> {
+                                    invisibleBlockPatchEnabled = !invisibleBlockPatchEnabled;
+                                    saveSettings();
+                                    button.setMessage(blockPatchLabel());
+                                    LOGGER.info("Invisible block patch {}",
+                                            invisibleBlockPatchEnabled ? "enabled" : "disabled");
+                                })
+                        .bounds(scaledWidth / 2 - 100, scaledHeight - 82, 200, 20)
+                        .build();
                 Button legTrackingButton = Button.builder(
                                 legTrackingLabel(),
                                 button -> {
@@ -45,9 +57,16 @@ public class QuestCraftRenderPatchClient implements ClientModInitializer {
                                 })
                         .bounds(scaledWidth / 2 - 100, scaledHeight - 56, 200, 20)
                         .build();
+                Screens.getWidgets(screen).add(blockPatchButton);
                 Screens.getWidgets(screen).add(legTrackingButton);
             }
         });
+    }
+
+    private static Component blockPatchLabel() {
+        return Component.translatable(invisibleBlockPatchEnabled
+                ? "options.questcraft-render-patch.invisible_blocks.on"
+                : "options.questcraft-render-patch.invisible_blocks.off");
     }
 
     private static Component legTrackingLabel() {
@@ -61,12 +80,20 @@ public class QuestCraftRenderPatchClient implements ClientModInitializer {
         return estimatedLegTrackingEnabled;
     }
 
+    /** Whether the optional Sodium/Vivecraft invisible-block patch is enabled. */
+    public static boolean isInvisibleBlockPatchEnabled() {
+        return invisibleBlockPatchEnabled;
+    }
+
     private static void loadSettings() {
         if (!Files.exists(settingsFile)) return;
         try (var reader = Files.newBufferedReader(settingsFile)) {
             JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
             if (json.has("estimatedLegTracking")) {
                 estimatedLegTrackingEnabled = json.get("estimatedLegTracking").getAsBoolean();
+            }
+            if (json.has("invisibleBlockPatch")) {
+                invisibleBlockPatchEnabled = json.get("invisibleBlockPatch").getAsBoolean();
             }
         } catch (IOException | RuntimeException exception) {
             LOGGER.warn("Could not load VR tracking settings", exception);
@@ -76,6 +103,7 @@ public class QuestCraftRenderPatchClient implements ClientModInitializer {
     private static void saveSettings() {
         JsonObject json = new JsonObject();
         json.addProperty("estimatedLegTracking", estimatedLegTrackingEnabled);
+        json.addProperty("invisibleBlockPatch", invisibleBlockPatchEnabled);
         try {
             Files.createDirectories(settingsFile.getParent());
             Files.writeString(settingsFile, json.toString() + System.lineSeparator());

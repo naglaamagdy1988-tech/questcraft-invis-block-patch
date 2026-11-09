@@ -8,6 +8,13 @@ state and read tracked poses without importing Vivecraft implementation
 classes directly. This project is still under development; APIs may change
 before a stable release.
 
+## Invisible block patch
+
+The optional Sodium/Vivecraft chunk-update patch is enabled by default. It
+forces updates during non-vanilla VR render passes. Toggle **Invisible Block
+Patch** in **Options → Video Settings** to turn it on or off. Its setting is
+saved in `config/questcraft-render-patch.json`.
+
 ## Current API
 
 ### VR state

@@ -1,4 +1,6 @@
 {
+  "options.questcraft-render-patch.invisible_blocks.on": "Invisible Block Patch: ON",
+  "options.questcraft-render-patch.invisible_blocks.off": "Invisible Block Patch: OFF",
   "options.questcraft-render-patch.estimated_legs.on": "Estimated Leg Poses: ON",
   "options.questcraft-render-patch.estimated_legs.off": "Estimated Leg Poses: OFF"
 }
