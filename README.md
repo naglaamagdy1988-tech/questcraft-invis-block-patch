@@ -58,6 +58,23 @@ Vivecraft recommends pre-tick world poses for tick-based trackers and
 world-render poses for per-frame trackers. Sample them on the appropriate
 client thread; do not retain live Vivecraft objects.
 
+### Full-body tracker poses
+
+`VRTrackerSnapshot.capture(timing)` returns immutable positions, directions, and rotations for available feet, waist, knees, and elbows. It reads Vivecraft's public `VRPose.getBodyPartData(VRBodyPart)` API. Missing optional trackers are omitted from the map; they do not invalidate other tracker data.
+
+```java
+VRTrackerSnapshot trackers = VRTrackerSnapshot.capture(
+        VRPoseSnapshot.Timing.PRE_TICK_WORLD
+);
+
+if (trackers.isAvailable()) {
+    VRPoseSnapshot.BodyPart waist = trackers.getTracker(
+            VRTrackerSnapshot.Tracker.WAIST
+    );
+}
+```
+
+`READY` means all seven tracker locations are present; `PARTIAL` means at least one is present. `NO_TRACKERS` means the pose was available but no full-body tracker positions were reported. Other statuses identify missing/incompatible APIs, inactive VR, or capture failures.
 ### Pose history and movement
 
 `VRPoseHistorySnapshot.capture(lookbackTicks, playerPositionRelative)`
