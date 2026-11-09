@@ -15,9 +15,6 @@ import java.lang.reflect.Method;
  * that need room-space or post-tick data.</p>
  */
 public final class VRPoseSnapshot {
-    private static final String VIVECRAFT_CLIENT_API =
-            "org.vivecraft.api.client.VRClientAPI";
-
     public enum Timing {
         LATEST_ROOM("getLatestRoomPose"),
         POST_TICK_ROOM("getPostTickRoomPose"),
@@ -95,16 +92,6 @@ public final class VRPoseSnapshot {
             return failed(null, Status.ERROR, "Pose timing must not be null");
         }
 
-        QuestCraftVRApi.ApiStatus apiStatus = QuestCraftVRApi.getApiStatus();
-        if (apiStatus == QuestCraftVRApi.ApiStatus.MISSING) {
-            return failed(timing, Status.API_MISSING,
-                    "Vivecraft client API class was not found");
-        }
-        if (apiStatus == QuestCraftVRApi.ApiStatus.INCOMPATIBLE) {
-            return failed(timing, Status.API_INCOMPATIBLE,
-                    "Vivecraft client API does not match the expected methods");
-        }
-
         QuestCraftVRApi.VRState state = QuestCraftVRApi.getVRState();
         switch (state.getStatus()) {
             case API_MISSING:
@@ -127,16 +114,15 @@ public final class VRPoseSnapshot {
         }
 
         try {
-            ClassLoader loader = QuestCraftVRApi.class.getClassLoader();
-            Class<?> apiClass = Class.forName(
-                    VIVECRAFT_CLIENT_API, true, loader);
-            Object apiInstance = apiClass.getMethod("instance").invoke(null);
+            Class<?> apiClass = VRReflectionCache.clientApiClass(true);
+            Object apiInstance = VRReflectionCache.clientApiInstance();
             if (apiInstance == null) {
                 return failed(timing, Status.ERROR,
                         "VRClientAPI.instance() returned null");
             }
 
-            Method poseGetter = apiClass.getMethod(timing.methodName);
+            Method poseGetter = VRReflectionCache.method(
+                    apiClass, timing.methodName);
             Object pose = poseGetter.invoke(apiInstance);
             if (pose == null) {
                 return failed(timing, Status.NO_POSE,
@@ -171,15 +157,15 @@ public final class VRPoseSnapshot {
 
     private static BodyPart readBodyPart(Object pose, String getterName)
             throws ReflectiveOperationException {
-        Method getter = pose.getClass().getMethod(getterName);
+        Method getter = VRReflectionCache.method(pose.getClass(), getterName);
         Object data = getter.invoke(pose);
         if (data == null) {
             return null;
         }
 
-        Object rawPosition = data.getClass().getMethod("getPos").invoke(data);
-        Object rawDirection = data.getClass().getMethod("getDir").invoke(data);
-        Object rawRotation = data.getClass().getMethod("getRotation").invoke(data);
+        Object rawPosition = VRReflectionCache.method(data.getClass(), "getPos").invoke(data);
+        Object rawDirection = VRReflectionCache.method(data.getClass(), "getDir").invoke(data);
+        Object rawRotation = VRReflectionCache.method(data.getClass(), "getRotation").invoke(data);
 
         Vector3 position = toVector(rawPosition);
         Vector3 direction = toVector(rawDirection);

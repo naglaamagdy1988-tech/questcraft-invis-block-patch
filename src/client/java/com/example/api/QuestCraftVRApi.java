@@ -15,8 +15,7 @@ public final class QuestCraftVRApi {
     /** Version of this bridge's public API contract. */
     public static final int API_VERSION = 1;
 
-    private static final String VIVECRAFT_CLIENT_API =
-            "org.vivecraft.api.client.VRClientAPI";
+    private static volatile ApiStatus cachedApiStatus;
 
     private QuestCraftVRApi() {
     }
@@ -110,43 +109,47 @@ public final class QuestCraftVRApi {
      * API class is absent, or INCOMPATIBLE when it does not match this bridge.
      */
     public static ApiStatus getApiStatus() {
+        ApiStatus cachedStatus = cachedApiStatus;
+        if (cachedStatus != null) return cachedStatus;
+
         final Class<?> apiClass;
         try {
-            apiClass = Class.forName(
-                    VIVECRAFT_CLIENT_API,
-                    false,
-                    QuestCraftVRApi.class.getClassLoader()
-            );
+            apiClass = VRReflectionCache.clientApiClass(false);
         } catch (ClassNotFoundException e) {
             return ApiStatus.MISSING;
         } catch (LinkageError | SecurityException e) {
-            return ApiStatus.INCOMPATIBLE;
+            return cacheApiStatus(ApiStatus.INCOMPATIBLE);
         }
 
         try {
-            Method instance = apiClass.getMethod("instance");
+            Method instance = VRReflectionCache.method(apiClass, "instance");
             if (!Modifier.isStatic(instance.getModifiers())
                     || !apiClass.isAssignableFrom(instance.getReturnType())) {
-                return ApiStatus.INCOMPATIBLE;
+                return cacheApiStatus(ApiStatus.INCOMPATIBLE);
             }
 
             if (!hasBooleanMethod(apiClass, "isVRInitialized")
                     || !hasBooleanMethod(apiClass, "isVRActive")
                     || !hasBooleanMethod(apiClass, "isSeated")
                     || !hasBooleanMethod(apiClass, "isLeftHanded")) {
-                return ApiStatus.INCOMPATIBLE;
+                return cacheApiStatus(ApiStatus.INCOMPATIBLE);
             }
 
-            return ApiStatus.AVAILABLE;
+            return cacheApiStatus(ApiStatus.AVAILABLE);
         } catch (ReflectiveOperationException | LinkageError
                  | SecurityException e) {
-            return ApiStatus.INCOMPATIBLE;
+            return cacheApiStatus(ApiStatus.INCOMPATIBLE);
         }
+    }
+
+    private static ApiStatus cacheApiStatus(ApiStatus status) {
+        cachedApiStatus = status;
+        return status;
     }
 
     private static boolean hasBooleanMethod(Class<?> type, String name)
             throws NoSuchMethodException {
-        Method method = type.getMethod(name);
+        Method method = VRReflectionCache.method(type, name);
         return method.getReturnType() == boolean.class
                 && !Modifier.isStatic(method.getModifiers());
     }
@@ -168,21 +171,14 @@ public final class QuestCraftVRApi {
         }
 
         try {
-            Class<?> apiClass = Class.forName(
-                    VIVECRAFT_CLIENT_API,
-                    true,
-                    QuestCraftVRApi.class.getClassLoader()
-            );
-
-            Method instanceMethod = apiClass.getMethod("instance");
-            Object apiInstance = instanceMethod.invoke(null);
+            Class<?> apiClass = VRReflectionCache.clientApiClass(true);
+            Object apiInstance = VRReflectionCache.clientApiInstance();
             if (apiInstance == null) {
                 return unavailable(apiStatus, StateStatus.ERROR,
                         "VRClientAPI.instance() returned null");
             }
 
-            boolean initialized = invokeBoolean(apiClass, apiInstance,
-                    "isVRInitialized");
+            boolean initialized = invokeBoolean(apiClass, apiInstance, "isVRInitialized");
             if (!initialized) {
                 return new VRState(apiStatus, StateStatus.NOT_INITIALIZED,
                         false, false, false, false, null);
@@ -211,7 +207,7 @@ public final class QuestCraftVRApi {
             Object apiInstance,
             String methodName
     ) throws ReflectiveOperationException {
-        Method method = apiClass.getMethod(methodName);
+        Method method = VRReflectionCache.method(apiClass, methodName);
         return Boolean.TRUE.equals(method.invoke(apiInstance));
     }
 

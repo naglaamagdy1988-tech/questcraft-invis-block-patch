@@ -11,11 +11,6 @@ import java.util.Map;
 
 /** Immutable snapshot of Vivecraft full-body tracker poses. */
 public final class VRTrackerSnapshot {
-    private static final String VIVECRAFT_CLIENT_API =
-            "org.vivecraft.api.client.VRClientAPI";
-    private static final String VIVECRAFT_BODY_PART =
-            "org.vivecraft.api.data.VRBodyPart";
-
     /** Tracker locations supported by Vivecraft's 26.2 public API. */
     public enum Tracker {
         RIGHT_FOOT, LEFT_FOOT, WAIST,
@@ -46,16 +41,6 @@ public final class VRTrackerSnapshot {
         if (timing == null) {
             return failed(null, Status.ERROR, "Pose timing must not be null");
         }
-        QuestCraftVRApi.ApiStatus apiStatus = QuestCraftVRApi.getApiStatus();
-        if (apiStatus == QuestCraftVRApi.ApiStatus.MISSING) {
-            return failed(timing, Status.API_MISSING,
-                    "Vivecraft client API class was not found");
-        }
-        if (apiStatus == QuestCraftVRApi.ApiStatus.INCOMPATIBLE) {
-            return failed(timing, Status.API_INCOMPATIBLE,
-                    "Vivecraft client API does not match the expected methods");
-        }
-
         QuestCraftVRApi.VRState state = QuestCraftVRApi.getVRState();
         switch (state.getStatus()) {
             case API_MISSING: return failed(timing, Status.API_MISSING, state.getError());
@@ -69,26 +54,28 @@ public final class VRTrackerSnapshot {
         if (!state.isActive()) return failed(timing, Status.NOT_IN_VR, null);
 
         try {
-            ClassLoader loader = QuestCraftVRApi.class.getClassLoader();
-            Class<?> apiClass = Class.forName(VIVECRAFT_CLIENT_API, true, loader);
-            Object api = apiClass.getMethod("instance").invoke(null);
+            Class<?> apiClass = VRReflectionCache.clientApiClass(true);
+            Object api = VRReflectionCache.clientApiInstance();
             if (api == null) return failed(timing, Status.ERROR,
                     "VRClientAPI.instance() returned null");
-            Object pose = apiClass.getMethod(timingMethod(timing)).invoke(api);
+            Object pose = VRReflectionCache.method(apiClass, timingMethod(timing))
+                    .invoke(api);
             if (pose == null) return failed(timing, Status.NO_POSE,
                     "Vivecraft returned no pose for " + timing);
 
-            Class<?> bodyPartClass = Class.forName(VIVECRAFT_BODY_PART, false, loader);
-            Method getBodyPartData = pose.getClass().getMethod("getBodyPartData", bodyPartClass);
+            Class<?> bodyPartClass = VRReflectionCache.bodyPartClass();
+            Method getBodyPartData = VRReflectionCache.method(
+                    pose.getClass(), "getBodyPartData", bodyPartClass);
             Map<Tracker, VRPoseSnapshot.BodyPart> result = new EnumMap<>(Tracker.class);
             for (Tracker tracker : Tracker.values()) {
-                Object part = enumConstant(bodyPartClass, tracker.name());
+                Object part = VRReflectionCache.enumConstant(bodyPartClass, tracker.name());
                 if (part == null) continue;
                 Object data = getBodyPartData.invoke(pose, part);
                 if (data == null) continue;
-                Object rawPos = data.getClass().getMethod("getPos").invoke(data);
-                Object rawDir = data.getClass().getMethod("getDir").invoke(data);
-                Object rawRotation = data.getClass().getMethod("getRotation").invoke(data);
+                Object rawPos = VRReflectionCache.method(data.getClass(), "getPos").invoke(data);
+                Object rawDir = VRReflectionCache.method(data.getClass(), "getDir").invoke(data);
+                Object rawRotation = VRReflectionCache.method(
+                        data.getClass(), "getRotation").invoke(data);
                 VRPoseSnapshot.Vector3 position = toVector(rawPos);
                 if (position == null) continue;
                 result.put(tracker, new VRPoseSnapshot.BodyPart(position,
@@ -117,15 +104,6 @@ public final class VRTrackerSnapshot {
             case POST_TICK_WORLD -> "getPostTickWorldPose";
             case WORLD_RENDER -> "getWorldRenderPose";
         };
-    }
-
-    private static Object enumConstant(Class<?> type, String name) {
-        if (!type.isEnum()) return null;
-        Object[] constants = type.getEnumConstants();
-        if (constants != null) for (Object value : constants) {
-            if (value instanceof Enum<?> enumValue && enumValue.name().equals(name)) return value;
-        }
-        return null;
     }
 
     private static VRPoseSnapshot.Vector3 toVector(Object value) {

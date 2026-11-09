@@ -14,11 +14,6 @@ import java.util.Map;
  * gesture mods without exposing Vivecraft classes in this API's signatures.
  */
 public final class VRPoseHistorySnapshot {
-    private static final String VIVECRAFT_CLIENT_API =
-            "org.vivecraft.api.client.VRClientAPI";
-    private static final String VIVECRAFT_BODY_PART =
-            "org.vivecraft.api.data.VRBodyPart";
-
     /** Tracked body parts exposed by Vivecraft's public API. */
     public enum BodyPart {
         HEAD,
@@ -95,18 +90,6 @@ public final class VRPoseHistorySnapshot {
                     playerPositionRelative, "lookbackTicks must be between 0 and 200");
         }
 
-        QuestCraftVRApi.ApiStatus apiStatus = QuestCraftVRApi.getApiStatus();
-        if (apiStatus == QuestCraftVRApi.ApiStatus.MISSING) {
-            return failed(Status.API_MISSING, 0, lookbackTicks,
-                    playerPositionRelative,
-                    "Vivecraft client API class was not found");
-        }
-        if (apiStatus == QuestCraftVRApi.ApiStatus.INCOMPATIBLE) {
-            return failed(Status.API_INCOMPATIBLE, 0, lookbackTicks,
-                    playerPositionRelative,
-                    "Vivecraft client API does not match the expected methods");
-        }
-
         QuestCraftVRApi.VRState state = QuestCraftVRApi.getVRState();
         switch (state.getStatus()) {
             case API_MISSING:
@@ -135,17 +118,15 @@ public final class VRPoseHistorySnapshot {
         }
 
         try {
-            ClassLoader loader = QuestCraftVRApi.class.getClassLoader();
-            Class<?> apiClass = Class.forName(
-                    VIVECRAFT_CLIENT_API, true, loader);
-            Object apiInstance = apiClass.getMethod("instance").invoke(null);
+            Class<?> apiClass = VRReflectionCache.clientApiClass(true);
+            Object apiInstance = VRReflectionCache.clientApiInstance();
             if (apiInstance == null) {
                 return failed(Status.ERROR, 0, lookbackTicks,
                         playerPositionRelative,
                         "VRClientAPI.instance() returned null");
             }
 
-            Object history = apiClass.getMethod("getHistoricalVRPoses")
+            Object history = VRReflectionCache.method(apiClass, "getHistoricalVRPoses")
                     .invoke(apiInstance);
             if (history == null) {
                 return failed(Status.NO_HISTORY, 0, lookbackTicks,
@@ -154,7 +135,7 @@ public final class VRPoseHistorySnapshot {
             }
 
             Class<?> historyClass = history.getClass();
-            Method ticksMethod = historyClass.getMethod("ticksOfHistory");
+            Method ticksMethod = VRReflectionCache.method(historyClass, "ticksOfHistory");
             int ticksAvailable = ((Number) ticksMethod.invoke(history)).intValue();
             if (ticksAvailable <= 0) {
                 return failed(Status.NO_HISTORY, 0, lookbackTicks,
@@ -165,25 +146,25 @@ public final class VRPoseHistorySnapshot {
             int actualLookback = Math.min(lookbackTicks,
                     Math.min(ticksAvailable, 200));
 
-            Class<?> bodyPartClass = Class.forName(
-                    VIVECRAFT_BODY_PART, false, loader);
+            Class<?> bodyPartClass = VRReflectionCache.bodyPartClass();
             if (!bodyPartClass.isEnum()) {
                 return failed(Status.API_INCOMPATIBLE, ticksAvailable,
                         actualLookback, playerPositionRelative,
                         "Vivecraft VRBodyPart is not an enum");
             }
 
-            Method netMovementMethod = historyClass.getMethod(
+            Method netMovementMethod = VRReflectionCache.method(historyClass,
                     "netMovement", bodyPartClass, int.class, boolean.class);
-            Method averageVelocityMethod = historyClass.getMethod(
+            Method averageVelocityMethod = VRReflectionCache.method(historyClass,
                     "averageVelocity", bodyPartClass, int.class, boolean.class);
-            Method averageSpeedMethod = historyClass.getMethod(
+            Method averageSpeedMethod = VRReflectionCache.method(historyClass,
                     "averageSpeed", bodyPartClass, int.class, boolean.class);
 
             Map<BodyPart, Movement> measurements =
                     new EnumMap<>(BodyPart.class);
             for (BodyPart part : BodyPart.values()) {
-                Object vivecraftPart = findEnumConstant(bodyPartClass, part.name());
+                Object vivecraftPart = VRReflectionCache.enumConstant(
+                        bodyPartClass, part.name());
                 if (vivecraftPart == null) {
                     continue;
                 }
@@ -243,20 +224,6 @@ public final class VRPoseHistorySnapshot {
             return failed(Status.ERROR, 0, lookbackTicks,
                     playerPositionRelative, describeFailure(e));
         }
-    }
-
-    private static Object findEnumConstant(Class<?> enumClass, String name) {
-        Object[] constants = enumClass.getEnumConstants();
-        if (constants == null) {
-            return null;
-        }
-        for (Object constant : constants) {
-            if (constant instanceof Enum<?> enumValue
-                    && enumValue.name().equals(name)) {
-                return constant;
-            }
-        }
-        return null;
     }
 
     private static VRPoseSnapshot.Vector3 toVector(Object value) {
