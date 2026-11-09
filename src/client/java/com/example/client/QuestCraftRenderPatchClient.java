@@ -5,7 +5,6 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.network.chat.Component;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
@@ -46,13 +45,8 @@ public class QuestCraftRenderPatchClient implements ClientModInitializer {
             while (toggleEstimatedLegTracking.consumeClick()) {
                 estimatedLegTrackingEnabled = !estimatedLegTrackingEnabled;
                 saveSettings();
-                if (client.player != null) {
-                    client.player.displayClientMessage(Component.literal(
-                            "Estimated leg tracking "
-                                    + (estimatedLegTrackingEnabled ? "enabled" : "disabled")
-                                    + " (approximate avatar pose)"
-                    ), true);
-                }
+                LOGGER.info("Estimated leg tracking {}",
+                        estimatedLegTrackingEnabled ? "enabled" : "disabled");
             }
         });
     }
