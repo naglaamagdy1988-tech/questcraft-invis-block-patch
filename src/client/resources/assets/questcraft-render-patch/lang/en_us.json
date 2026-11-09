@@ -1,3 +1,4 @@
 {
-  "key.questcraft-render-patch.toggle_estimated_legs": "Toggle Estimated Leg Poses"
+  "options.questcraft-render-patch.estimated_legs.on": "Estimated Leg Poses: ON",
+  "options.questcraft-render-patch.estimated_legs.off": "Estimated Leg Poses: OFF"
 }
