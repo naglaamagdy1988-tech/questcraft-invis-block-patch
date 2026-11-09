@@ -75,6 +75,18 @@ if (trackers.isAvailable()) {
 ```
 
 `READY` means all seven tracker locations are present; `PARTIAL` means at least one is present. `NO_TRACKERS` means the pose was available but no full-body tracker positions were reported. Other statuses identify missing/incompatible APIs, inactive VR, or capture failures.
+### Estimated leg poses
+
+Quest 2 camera images are not available to the game, so `VRLegEstimateSnapshot.capture()` provides an optional procedural avatar estimate based on in-game movement and facing. It does not track the player's physical legs. Toggle it with **Toggle Estimated Leg Poses** in **Options → Controls → Key Binds** (default `K`). The enabled state is stored in `config/questcraft-render-patch.json`.
+
+```java
+VRLegEstimateSnapshot legs = VRLegEstimateSnapshot.capture();
+if (legs.isEstimated()) {
+    VRPoseSnapshot.Vector3 leftFoot =
+            legs.getPosition(VRLegEstimateSnapshot.Part.LEFT_FOOT);
+}
+```
+
 ### Pose history and movement
 
 `VRPoseHistorySnapshot.capture(lookbackTicks, playerPositionRelative)`
