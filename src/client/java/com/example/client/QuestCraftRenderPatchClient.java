@@ -22,7 +22,7 @@ public class QuestCraftRenderPatchClient implements ClientModInitializer {
             LoggerFactory.getLogger("QuestCraftRenderPatch");
     private static boolean estimatedLegTrackingEnabled;
     private static volatile boolean invisibleBlockPatchEnabled = true;
-    private static volatile boolean reducedVrChunkRefreshes = true;
+    private static volatile boolean reducedVrChunkRefreshes;
     private static Path settingsFile;
 
     @Override

@@ -37,6 +37,6 @@ public final class QuestCraftSodiumConfig implements ConfigEntryPoint {
                                         .setBinding(
                                                 QuestCraftRenderPatchClient::setVrChunkRefreshesReduced,
                                                 QuestCraftRenderPatchClient::areVrChunkRefreshesReduced)
-                                        .setDefaultValue(true))));
+                                        .setDefaultValue(false))));
     }
 }
