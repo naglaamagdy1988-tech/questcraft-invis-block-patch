@@ -13,8 +13,10 @@ before a stable release.
 The optional Sodium/Vivecraft chunk-update patch is enabled by default. It
 forces updates during non-vanilla VR render passes. In Sodium, open
 **Options → Video Settings → QuestCraft Render Patch** to toggle
-**Invisible Block Patch**. Without Sodium, a fallback toggle appears in the
-vanilla video settings screen. Its setting is saved in
+**Invisible Block Patch** and **Reduce VR Chunk Refreshes**. The second option
+limits extra graph refreshes to once per world tick while leaving normal
+camera-change refreshes intact. Without Sodium, a fallback toggle appears in
+the vanilla video settings screen. Settings are saved in
 `config/questcraft-render-patch.json`.
 
 ## Current API

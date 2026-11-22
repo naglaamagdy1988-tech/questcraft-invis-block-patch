@@ -22,6 +22,7 @@ public class QuestCraftRenderPatchClient implements ClientModInitializer {
             LoggerFactory.getLogger("QuestCraftRenderPatch");
     private static boolean estimatedLegTrackingEnabled;
     private static volatile boolean invisibleBlockPatchEnabled = true;
+    private static volatile boolean reducedVrChunkRefreshes = true;
     private static Path settingsFile;
 
     @Override
@@ -89,6 +90,14 @@ public class QuestCraftRenderPatchClient implements ClientModInitializer {
         invisibleBlockPatchEnabled = enabled;
     }
 
+    public static boolean areVrChunkRefreshesReduced() {
+        return reducedVrChunkRefreshes;
+    }
+
+    static void setVrChunkRefreshesReduced(boolean enabled) {
+        reducedVrChunkRefreshes = enabled;
+    }
+
     private static void loadSettings() {
         if (!Files.exists(settingsFile)) return;
         try (var reader = Files.newBufferedReader(settingsFile)) {
@@ -99,6 +108,9 @@ public class QuestCraftRenderPatchClient implements ClientModInitializer {
             if (json.has("invisibleBlockPatch")) {
                 invisibleBlockPatchEnabled = json.get("invisibleBlockPatch").getAsBoolean();
             }
+            if (json.has("reducedVrChunkRefreshes")) {
+                reducedVrChunkRefreshes = json.get("reducedVrChunkRefreshes").getAsBoolean();
+            }
         } catch (IOException | RuntimeException exception) {
             LOGGER.warn("Could not load VR tracking settings", exception);
         }
@@ -108,6 +120,7 @@ public class QuestCraftRenderPatchClient implements ClientModInitializer {
         JsonObject json = new JsonObject();
         json.addProperty("estimatedLegTracking", estimatedLegTrackingEnabled);
         json.addProperty("invisibleBlockPatch", invisibleBlockPatchEnabled);
+        json.addProperty("reducedVrChunkRefreshes", reducedVrChunkRefreshes);
         try {
             Files.createDirectories(settingsFile.getParent());
             Files.writeString(settingsFile, json.toString() + System.lineSeparator());

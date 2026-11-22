@@ -25,6 +25,18 @@ public final class QuestCraftSodiumConfig implements ConfigEntryPoint {
                                         .setBinding(
                                                 QuestCraftRenderPatchClient::setInvisibleBlockPatchEnabled,
                                                 QuestCraftRenderPatchClient::isInvisibleBlockPatchEnabled)
+                                        .setDefaultValue(true))
+                                .addOption(builder.createBooleanOption(
+                                                Identifier.parse("questcraft-render-patch:reduced_vr_chunk_refreshes"))
+                                        .setName(Component.translatable(
+                                                "options.questcraft-render-patch.reduce_vr_refreshes.name"))
+                                        .setTooltip(Component.translatable(
+                                                "options.questcraft-render-patch.reduce_vr_refreshes.tooltip"))
+                                        .setStorageHandler(
+                                                QuestCraftRenderPatchClient::saveSettings)
+                                        .setBinding(
+                                                QuestCraftRenderPatchClient::setVrChunkRefreshesReduced,
+                                                QuestCraftRenderPatchClient::areVrChunkRefreshesReduced)
                                         .setDefaultValue(true))));
     }
 }
