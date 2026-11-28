@@ -1,1 +1,63 @@
-fatal: not a git repository (or any of the parent directories): .git
+
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v6
+
+      - name: setup jdk
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: microsoft
+
+      - name: make gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: build and inspect jar
+        run: |
+          ./gradlew build
+          echo "===== JAR FILES ====="
+          find build/libs -maxdepth 1 -type f -name "*.jar" -print
+          main_jar=""
+          for f in build/libs/*.jar; do
+            case "$f" in
+              *-sources.jar) continue ;;
+            esac
+            main_jar="$f"
+          done
+          test -n "$main_jar"
+          jar tf "$main_jar" > build/jar-contents.txt
+          for required_entry in \
+            "com/example/client/QuestCraftRenderPatchClient.class" \
+            "com/example/client/QuestCraftSodiumConfig.class" \
+            "com/example/client/mixin/SodiumWorldRendererMixin.class" \
+            "fabric.mod.json" \
+            "modid.mixins.json"; do
+            if ! grep -Fxq "$required_entry" build/jar-contents.txt; then
+              echo "Missing required jar entry: $required_entry"
+              exit 1
+            fi
+          done
+          if grep -Fq "ExampleModClient" build/jar-contents.txt; then
+            echo "Unexpected example client class found in the mod jar"
+            exit 1
+          fi
+          unzip -p "$main_jar" fabric.mod.json | grep -Fq 'com.example.client.QuestCraftRenderPatchClient'
+          unzip -p "$main_jar" fabric.mod.json | grep -Fq 'sodium:config_api_user'
+          unzip -p "$main_jar" fabric.mod.json | grep -Fq 'com.example.client.QuestCraftSodiumConfig'
+          unzip -p "$main_jar" modid.mixins.json | grep -Fq 'SodiumWorldRendererMixin'
+          echo "Verified client initializer, Sodium settings entrypoint, and render mixin in $main_jar"
+
+      - name: capture build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: Artifacts
+          path: build/libs/
